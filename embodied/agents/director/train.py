@@ -2,6 +2,7 @@ import pathlib
 import sys
 import warnings
 
+
 warnings.filterwarnings('ignore', '.*box bound precision lowered.*')
 warnings.filterwarnings('ignore', '.*using stateful random seeds*')
 warnings.filterwarnings('ignore', '.*is a deprecated alias for.*')
@@ -77,8 +78,8 @@ def main(argv=None):
     raise NotImplementedError(config.replay)
 
   try:
-    config = config.update({'env.seed': hash((config.seed, parsed.actor_id))})
-    env = embodied.envs.load_env(
+    config = config.update({'env.seed': hash((config.seed, parsed.actor_id))})  # seed
+    env = embodied.envs.load_env(                                               # env loading
         config.task, mode='train', logdir=logdir, **config.env)
     agent = agnt.Agent(env.obs_space, env.act_space, step, config)
     if config.run == 'train':
@@ -94,14 +95,14 @@ def main(argv=None):
       cleanup.append(eval_env)
     elif config.run == 'train_with_viz':
       if config.eval_dir:
-        assert not config.train.eval_fill
+        assert config.train.eval_fill, f"config.train.eval_fill got: {config.train.eval_fil}" #it was not
         eval_replay = make_replay(config.eval_dir, config.replay_size // 10)
       else:
         assert config.train.eval_fill
         eval_replay = make_replay('eval_episodes', config.replay_size // 10)
       replay = make_replay('episodes', config.replay_size)
       train_with_viz.train_with_viz(
-          agent, env, replay, eval_replay, logger, args)
+          agent, env, replay, eval_replay, logger, args)                                     # train with viz
     elif config.run == 'learning':
       assert config.replay.sync
       env.close()

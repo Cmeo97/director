@@ -104,6 +104,7 @@ def train_with_viz(agent, env, train_replay, eval_replay, logger, args):
       logger.add(agent.report(next(dataset_eval)), prefix='eval')
       logger.add(timer.stats(), prefix='timer')
       logger.write(fps=True)
+      
   driver.on_step(train_step)
 
   checkpoint = embodied.Checkpoint(logdir / 'checkpoint.pkl')
