@@ -41,6 +41,7 @@ def main(argv=None):
   step = embodied.Counter()
   cleanup = []
 
+  # Logger Definition
   if config.run == 'acting':
     actordir = logdir / f'actor{parsed.actor_id}'
     logger = embodied.Logger(step, [
@@ -56,6 +57,9 @@ def main(argv=None):
     ], multiplier=config.env.repeat)
 
   chunk = config.replay_chunk
+
+
+  # Replay scheme def
   if config.replay == 'fixed':
     def make_replay(name, capacity):
       directory = logdir / name
@@ -79,8 +83,12 @@ def main(argv=None):
 
   try:
     config = config.update({'env.seed': hash((config.seed, parsed.actor_id))})  # seed
-    env = embodied.envs.load_env(                                               # env loading
+
+    # Environment Loading
+    env = embodied.envs.load_env(                                               
         config.task, mode='train', logdir=logdir, **config.env)
+    
+    # Agent Definition
     agent = agnt.Agent(env.obs_space, env.act_space, step, config)
     if config.run == 'train':
       replay = make_replay('episodes', config.replay_size)
@@ -93,6 +101,8 @@ def main(argv=None):
       embodied.run.train_eval(
           agent, env, eval_env, replay, eval_replay, logger, args)
       cleanup.append(eval_env)
+
+    # Training scheme (Chosen one by default)  
     elif config.run == 'train_with_viz':
       if config.eval_dir:
         assert config.train.eval_fill, f"config.train.eval_fill got: {config.train.eval_fil}" #it was not
@@ -101,8 +111,12 @@ def main(argv=None):
         assert config.train.eval_fill
         eval_replay = make_replay('eval_episodes', config.replay_size // 10)
       replay = make_replay('episodes', config.replay_size)
+
+      # Start training
       train_with_viz.train_with_viz(
-          agent, env, replay, eval_replay, logger, args)                                     # train with viz
+          agent, env, replay, eval_replay, logger, args)  
+          
+                                          
     elif config.run == 'learning':
       assert config.replay.sync
       env.close()

@@ -39,7 +39,7 @@ defaults:
   # Agent
   task_behavior: Hierarchy
   expl_behavior: None
-  batch_size: 16
+  batch_size: 32
   transform_rewards: off
   expl_noise: 0.0
   eval_noise: 0.0

@@ -24,7 +24,7 @@ def train_with_viz(agent, env, train_replay, eval_replay, logger, args):
     timer.wrap('replay', train_replay, ['_sample'])
 
   nonzeros = set()
-  def per_episode(ep):
+  def per_episode(ep):   ## <--- This function logs the episode metrics or partial goals
     metrics = {}
     length = len(ep['reward']) - 1
     score = float(ep['reward'].astype(np.float64).sum())

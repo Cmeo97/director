@@ -252,6 +252,7 @@ class WorldModel(tfutils.Module):
     traj['cont'] = cont
     traj['weight'] = tf.math.cumprod(
         self.config.imag_discount * cont) / self.config.imag_discount
+    
     return traj
 
   def report(self, data):

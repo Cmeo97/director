@@ -3,7 +3,7 @@
 #SBATCH --job-name=director_example
 #SBATCH --partition=long                        
 #SBATCH --cpus-per-task=4
-#SBATCH --gres=gpu:rtx8000:2
+#SBATCH --gres=gpu:rtx8000:1
 #SBATCH --mem=120G                                     
 
 
@@ -11,6 +11,7 @@
 
 # 1. Load the required modules
 module load anaconda/3
+module load cuda/11.2
 #module load cuda/11.0/cudnn/8.0  
 #module load tensorflow
 conda activate ~/.conda/envs/mamba/envs/py39-tf211
@@ -25,8 +26,10 @@ task=$2
 T=$3
 f=$4
 
+echo 'Training director with env: '${env}', task: '${task}', T: '${T}', f: '${f}
+
 python embodied/agents/director/train.py \
-  --logdir ~/scratch/director/logdir/${env}/${task}/${T}/${f} \
+  --logdir /home/mila/c/cristian.meo/scratch/director/logdir/${env}/${task}/${T}/${f} \
   --env_skill_duration ${T} \
   --train_skill_duration ${T} \
   --configs ${env} \

@@ -97,30 +97,31 @@ do
 	done
 done 
 
-declare -a All_Envs=(dmc_vision)
-
-declare -a All_Tasks=(dmc_walker_walk)
-
-declare -a All_Ts=(4 8 16)
-
-declare -a All_Seeds=(1 2 3)
-
-
-for Env in "${All_Envs[@]}"
-do
-	for Task in "${All_Tasks[@]}"
-	do
-		for T in "${All_Ts[@]}"
-		do
-            for seed in "${All_Seeds[@]}"
-            do
-                sbatch example.sh $Env $Task $T $seed
-            done
-		done
-	done
-done 
-
-
-
-
-
+#declare -a All_Envs=(dmc_vision)
+#
+#declare -a All_Tasks=(dmc_walker_walk)
+#
+#declare -a All_Ts=(4 8 16)
+#
+#declare -a All_Seeds=(1 2 3)
+#
+#
+#for Env in "${All_Envs[@]}"
+#do
+#	for Task in "${All_Tasks[@]}"
+#	do
+#		for T in "${All_Ts[@]}"
+#		do
+#            for seed in "${All_Seeds[@]}"
+#            do
+#                sbatch example.sh $Env $Task $T $seed
+#            done
+#		done
+#	done
+#done 
+#
+#
+#
+#
+#
+#
