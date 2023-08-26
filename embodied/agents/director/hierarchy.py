@@ -62,7 +62,7 @@ class Hierarchy(tfutils.Module):
 
     self.feat = nets.Input(['deter'])
     self.goal_shape = (self.config.rssm.deter,)
-    self.enc = nets.MLP(
+    self.enc = nets.alphaMLP(
         config.skill_shape, dims='context', **config.goal_encoder)
     self.dec = nets.MLP(
         self.goal_shape, dims='context', **self.config.goal_decoder)
@@ -237,10 +237,11 @@ class Hierarchy(tfutils.Module):
     else:
       goal = context = feat
     with tf.GradientTape() as tape:
-      enc = self.enc({'goal': goal, 'context': context})
+      enc, mu_p, std_p = self.enc({'goal': goal, 'context': context})
       dec = self.dec({'skill': enc.sample(), 'context': context})
       rec = -dec.log_prob(tf.stop_gradient(goal))
       if self.config.goal_kl:
+        
         kl = tfd.kl_divergence(enc, self.prior)
         kl, mets = self.kl(kl)
         metrics.update({f'goalkl_{k}': v for k, v in mets.items()})
@@ -286,7 +287,7 @@ class Hierarchy(tfutils.Module):
     feat = self.feat(start).astype(tf.float32)
     if impl == 'replay':
       target = tf.random.shuffle(feat).astype(tf.float32)
-      skill = self.enc({'goal': target, 'context': feat}).sample()
+      skill, _, _ = self.enc({'goal': target, 'context': feat}).sample()
       return self.dec({'skill': skill, 'context': feat}).mode()
     if impl == 'replay_direct':
       return tf.random.shuffle(feat).astype(tf.float32)
@@ -374,7 +375,8 @@ class Hierarchy(tfutils.Module):
     elif self.config.goal_reward == 'epsilon':
       return ((goal - feat).mean(-1) < 1e-3).astype(tf.float32)[1:]
     elif self.config.goal_reward == 'enclogprob':
-      return self.enc({'goal': goal, 'context': context}).log_prob(skill)[1:]
+      out, _, _= self.enc({'goal': goal, 'context': context})
+      return out.log_prob(skill)[1:]
     elif self.config.goal_reward == 'encprob':
       return self.enc({'goal': goal, 'context': context}).prob(skill)[1:]
     elif self.config.goal_reward == 'enc_normed_cos':
@@ -393,7 +395,7 @@ class Hierarchy(tfutils.Module):
   def elbo_reward(self, traj):
     feat = self.feat(traj).astype(tf.float32)
     context = tf.repeat(feat[0][None], 1 + self.config.imag_horizon, 0)
-    enc = self.enc({'goal': feat, 'context': context})
+    enc, _, _ = self.enc({'goal': feat, 'context': context})
     dec = self.dec({'skill': enc.sample(), 'context': context})
     ll = dec.log_prob(feat)
     kl = tfd.kl_divergence(enc, self.prior)

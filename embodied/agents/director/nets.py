@@ -343,6 +343,49 @@ class MLP(tfutils.Module):
   def _out(self, name, shape, x):
     return self.get(f'dist_{name}', DistLayer, shape, **self._dist)(x)
 
+class alphaMLP(tfutils.Module):
+
+  def __init__(self, shape, layers, units, inputs=['tensor'], dims=None, **kw):
+    assert shape is None or isinstance(shape, (int, tuple, dict)), shape
+    if isinstance(shape, int):
+      shape = (shape,)
+    self._shape = shape
+    self._layers = layers
+    self._units = units
+    self._inputs = Input(inputs, dims=dims)
+    distkeys = ('dist', 'outscale', 'minstd', 'maxstd', 'unimix', 'outnorm')
+    self._dense = {k: v for k, v in kw.items() if k not in distkeys}
+    self._dist = {k: v for k, v in kw.items() if k in distkeys}
+
+  def __call__(self, inputs):
+    feat = self._inputs(inputs)
+    x = tf.cast(feat, prec.global_policy().compute_dtype)
+    x = x.reshape([-1, x.shape[-1]])
+    for i in range(self._layers):
+      x = self.get(f'dense{i}', Dense, self._units, **self._dense)(x)
+    x = x.reshape(feat.shape[:-1] + [x.shape[-1]])
+    if self._shape is None:
+      return x
+    elif isinstance(self._shape, tuple):
+      return self._out('out', self._shape, x)
+    elif isinstance(self._shape, dict):
+      return {k: self._out(k, v, x) for k, v in self._shape.items()}
+    else:
+      raise ValueError(self._shape)
+
+  def _out(self, name, shape, x):
+
+    out = self.get(f'dist_{name}', DistLayer, shape, **self._dist)(x)
+    mu = out.mean()
+    std = out.stddev()
+    eps = 1e-8
+
+    mu_p = tf.reshape(tf.reduce_sum(mu * tf.math.reciprocal_no_nan(std + eps), axis=1) * 
+                 tf.math.reciprocal_no_nan(tf.reduce_sum(tf.math.reciprocal_no_nan(std + eps), axis=1)), [-1, 1])
+
+    std_p = tf.reshape(tf.reduce_sum(tf.math.reciprocal_no_nan(std + eps), axis=1), [-1, 1])
+
+    return out, mu_p, std_p
 
 class DistLayer(tfutils.Module):
 

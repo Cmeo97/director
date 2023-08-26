@@ -563,3 +563,36 @@ class Normalize:
     else:
       raise NotImplementedError(self._impl)
     return values
+
+
+class TC_Bound(Module):
+    def __init__(self, beta, C, warmup_epoch, alpha):
+        super(TC_Bound, self).__init__()
+   
+        self.beta = beta
+        self.C = 50
+        self.warmup_epoch = warmup_epoch
+        self.alpha = alpha
+        self.eps = 1e-8
+    
+    def forward(self, recon_loss, mu, log_var, std, mu_p, std_p, epoch):
+        KLD_f = -0.5 * tf.reduce_sum(1 + tf.math.log(tf.abs(std_p) + self.eps) - 
+                                     tf.math.log(tf.abs(std) + self.eps) - 
+                                     tf.square(mu_p - mu) * tf.math.reciprocal_no_nan(std + self.eps) - 
+                                     std_p * tf.math.reciprocal_no_nan(std + self.eps), axis=1)
+
+        KLD = -0.5 * tf.reduce_sum(1 + log_var - tf.square(mu) - tf.exp(log_var), axis=-1)
+
+        C_factor = tf.minimum(tf.cast(epoch, tf.float32) / (self.warmup_epoch + 1), 1.0)
+        
+        KLD_diff = tf.abs(KLD - self.C )
+        KLD_f_diff = tf.abs(KLD_f - self.C )
+
+        K = int(mu.shape[1])
+
+        # `recon_loss` is mentioned in the formula but it's not provided in your given code. 
+        # I assume it's computed elsewhere in your class or passed as an argument. 
+        # Ensure that you define or provide `recon_loss` before this line.
+        return tf.reduce_mean((K - self.alpha) / K * recon_loss + 
+                              (1 - self.alpha) * self.beta * KLD_diff + 
+                              self.alpha / K * KLD_f_diff, axis=0)
