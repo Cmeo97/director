@@ -1,21 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=director_example
-#SBATCH --partition=long                        
-#SBATCH --cpus-per-task=4
-#SBATCH --gres=gpu:rtx8000:1
-#SBATCH --mem=120G                                     
 
-
-#conda_env=${1}
-
-# 1. Load the required modules
-module load anaconda/3
-module load cuda/11.2
-#module load cuda/11.0/cudnn/8.0  
-#module load tensorflow
-conda activate ~/.conda/envs/mamba/envs/py39-tf211
-export CONDA_PREFIX=/home/mila/c/cristian.meo/.conda/envs/mamba/envs/py39-tf211/bin
+conda activate py39-tf211
+export CONDA_PREFIX=/users/cristianmeo/conda/envs/py39-tf211/bin
 export XLA_FLAGS=--xla_gpu_cuda_data_dir=$CONDA_PREFIX
 echo $CONDA_PREFIX
 echo $XLA_FLAGS
@@ -23,15 +10,12 @@ echo $XLA_FLAGS
 
 env=$1
 task=$2
-T=$3
 f=$4
 
-echo 'Training director with env: '${env}', task: '${task}', T: '${T}', f: '${f}
+echo 'Training director with env: '${env}', task: '${task}' f: '${f}
 
-python embodied/agents/director/train.py \
-  --logdir /home/mila/c/cristian.meo/scratch/director/logdir/${env}/${task}/${T}/${f} \
-  --env_skill_duration ${T} \
-  --train_skill_duration ${T} \
+CUDA_VISIBLE_DEVICES=6 nohup python embodied/agents/director/train.py \
+  --logdir /space/cristianmeo/director/logdir/${env}/${task}/${f} \
   --configs ${env} \
   --task ${task} \
 > logs/director_training_"${task}""-"$(date +%Y%m%d-%H%M%S).out 2> logs/director_training_"${task}""-"$(date +%Y%m%d-%H%M%S).err 
