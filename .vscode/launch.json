@@ -11,11 +11,11 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "--logdir", "/home/mila/c/cristian.meo/scratch/director/logdir",
+                "--logdir", "/space/cristianmeo/director_logdir_trial",
                 "--configs", "loconav",
-                "--task", "loconav_ant_maze_xl",
+                "--task", "loconav_ant_maze_s",
             ],
-            "justMyCode": true
+            "justMyCode": false
         }
     ]
 }

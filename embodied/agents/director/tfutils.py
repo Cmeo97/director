@@ -566,33 +566,40 @@ class Normalize:
 
 
 class TC_Bound(Module):
-    def __init__(self, beta, C, warmup_epoch, alpha):
-        super(TC_Bound, self).__init__()
-   
-        self.beta = beta
-        self.C = 50
-        self.warmup_epoch = warmup_epoch
-        self.alpha = alpha
-        self.eps = 1e-8
+  def __init__(self, beta, alpha):
+    super(TC_Bound, self).__init__()
+
+    self.beta = beta
+    self.C = 10
+    self.warmup_step = 10000
+    self.alpha = alpha
+    self.eps = 1e-8
+    self._step = tf.Variable(0, trainable=False, dtype=tf.int64)
+  
+  def __call__(self, recon_loss, enc, KLD, mu_p, std_p):
+      
+      
+    self._step.assign_add(1)
     
-    def forward(self, recon_loss, mu, log_var, std, mu_p, std_p, epoch):
-        KLD_f = -0.5 * tf.reduce_sum(1 + tf.math.log(tf.abs(std_p) + self.eps) - 
-                                     tf.math.log(tf.abs(std) + self.eps) - 
-                                     tf.square(mu_p - mu) * tf.math.reciprocal_no_nan(std + self.eps) - 
-                                     std_p * tf.math.reciprocal_no_nan(std + self.eps), axis=1)
-
-        KLD = -0.5 * tf.reduce_sum(1 + log_var - tf.square(mu) - tf.exp(log_var), axis=-1)
-
-        C_factor = tf.minimum(tf.cast(epoch, tf.float32) / (self.warmup_epoch + 1), 1.0)
-        
-        KLD_diff = tf.abs(KLD - self.C )
-        KLD_f_diff = tf.abs(KLD_f - self.C )
-
-        K = int(mu.shape[1])
-
-        # `recon_loss` is mentioned in the formula but it's not provided in your given code. 
-        # I assume it's computed elsewhere in your class or passed as an argument. 
-        # Ensure that you define or provide `recon_loss` before this line.
-        return tf.reduce_mean((K - self.alpha) / K * recon_loss + 
-                              (1 - self.alpha) * self.beta * KLD_diff + 
-                              self.alpha / K * KLD_f_diff, axis=0)
+    mu = tf.reshape(enc.mean(), [-1, 64])
+    log_var = tf.reshape(enc.variance(), [-1, 64])
+    recon_loss = tf.reshape(recon_loss, [-1, 1])
+    KLD = tf.reshape(KLD, [-1, 1])
+    eps = tf.random.normal(shape=mu.shape)
+    std = tf.reshape(eps * tf.exp(log_var * .5), [-1, 64])
+    
+    
+    KLD_f_a = tf.math.log(tf.abs(std_p) + self.eps) - tf.math.log(tf.abs(std) + self.eps)
+    KLD_f_b = tf.square(mu_p - mu) * tf.math.reciprocal_no_nan(std + self.eps) - std_p * tf.math.reciprocal_no_nan(std + self.eps)
+    KLD_f = -0.5 * tf.reduce_sum(1 + KLD_f_a - KLD_f_b , axis=1)
+    
+    C_factor = tf.minimum(tf.cast(self._step, tf.float32) / (self.warmup_step + 1), 1.0)
+    
+    KLD_diff = tf.abs(KLD - tf.stop_gradient(tf.tensor(self.C * C_factor)))
+    KLD_f_diff = tf.reshape(tf.abs(KLD_f - tf.stop_gradient(tf.tensor(self.C * C_factor))), [-1, 1])
+    K = tf.stop_gradient(float(tf.tensor(mu.shape[1])))
+    
+    tc_loss = ((K - self.alpha) / K * recon_loss + (1 - self.alpha) * self.beta * KLD_diff + self.alpha / K * KLD_f_diff).mean()
+    
+    metrics = {'kl': KLD_diff.mean(), 'kl_p': KLD_f_diff.mean(), 'loss_tc': tc_loss}
+    return tc_loss, metrics

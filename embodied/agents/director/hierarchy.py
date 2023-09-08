@@ -68,6 +68,7 @@ class Hierarchy(tfutils.Module):
         self.goal_shape, dims='context', **self.config.goal_decoder)
     self.kl = tfutils.AutoAdapt((), **self.config.encdec_kl)
     self.opt = tfutils.Optimizer('goal', **config.encdec_opt)
+    self.tc_loss = tfutils.TC_Bound(4, 0.1)
 
   def initial(self, batch_size):
     return {
@@ -241,10 +242,11 @@ class Hierarchy(tfutils.Module):
       dec = self.dec({'skill': enc.sample(), 'context': context})
       rec = -dec.log_prob(tf.stop_gradient(goal))
       if self.config.goal_kl:
-        
         kl = tfd.kl_divergence(enc, self.prior)
         kl, mets = self.kl(kl)
+        loss, mets_klp = self.tc_loss(rec, enc, kl, mu_p, std_p)
         metrics.update({f'goalkl_{k}': v for k, v in mets.items()})
+        metrics.update({f'goalkl_{k}': v for k, v in mets_klp.items()})
         assert rec.shape == kl.shape, (rec.shape, kl.shape)
       else:
         kl = 0.0

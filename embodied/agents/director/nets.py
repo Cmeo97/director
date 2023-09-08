@@ -376,8 +376,9 @@ class alphaMLP(tfutils.Module):
   def _out(self, name, shape, x):
 
     out = self.get(f'dist_{name}', DistLayer, shape, **self._dist)(x)
-    mu = out.mean()
-    std = out.stddev()
+    
+    mu = tf.reshape(out.mean(), [-1, 64])
+    std = tf.reshape(out.stddev(), [-1, 64])
     eps = 1e-8
 
     mu_p = tf.reshape(tf.reduce_sum(mu * tf.math.reciprocal_no_nan(std + eps), axis=1) * 
