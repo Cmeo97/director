@@ -10,11 +10,11 @@ echo $XLA_FLAGS
 
 env=$1
 task=$2
-f=$4
+f=$3
 
 echo 'Training director with env: '${env}', task: '${task}' f: '${f}
 
-CUDA_VISIBLE_DEVICES=6 nohup python embodied/agents/director/train.py \
+CUDA_VISIBLE_DEVICES=4 nohup python embodied/agents/director/train.py \
   --logdir /space/cristianmeo/director/logdir/${env}/${task}/${f} \
   --configs ${env} \
   --task ${task} \
